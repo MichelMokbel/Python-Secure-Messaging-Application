@@ -1,4 +1,5 @@
 import sqlite3
+import hashlib
 from user import User
 from Crypto.PublicKey import RSA
 
@@ -55,13 +56,15 @@ class Database:
         Adds a new user ot the 'users' tables in the database.
         :param user: The user object to be added to the database.
         """
+        # Hash the user's password
+        hashed_password = hashlib.sha256(user.password.encode()).hexdigest()
         # Get a connection to the database
         with self.get_connection() as conn:
             # Insert a new user into the users table with the provided values
             conn.execute("""
                 INSERT INTO users (username, password, private_key, public_key) 
                 VALUES (?, ?, ?, ?)
-            """, (user.username, user.password, user.private_key.export_key(), user.public_key.export_key()))
+            """, (user.username, hashed_password, user.private_key.export_key(), user.public_key.export_key()))
             # Commit the changes to the database
             conn.commit()
 
@@ -79,10 +82,11 @@ class Database:
         with self.get_connection() as conn:
             # If a password is provided, retrieve the user with the given username and password
             if password:
+                hashed_password = hashlib.sha256(password.encode()).hexdigest()
                 query = "SELECT username, password, private_key, public_key " \
                         "FROM users " \
                         "WHERE username = ? AND password = ?"
-                cursor = conn.execute(query, (username, password))
+                cursor = conn.execute(query, (username, hashed_password))
             # Otherwise, retrieve the user with the given username
             else:
                 query = "SELECT username, password, private_key, public_key FROM users WHERE username = ?"
